@@ -1,5 +1,6 @@
 import streamlit as st
 import random
+from datetime import datetime
 
 # ============================================
 # 🎓 MATHCOPAIN - Application Streamlit
@@ -94,42 +95,53 @@ def generer_multiplication(niveau):
         'operande1': table,
         'operande2': multiplicateur
     }
-
 def generer_probleme(niveau):
     # Situations pour CE1/CE2
     situations_base = [
         {
             'contexte': "Marie a {a} billes. Son ami lui en donne {b}.",
             'question': "Combien de billes a-t-elle maintenant ?",
-            'operation': 'addition'        },
+            'operation': 'addition'
+        },
         {
             'contexte': "Théo a {a} euros. Il achète un jeu qui coûte {b} euros.",
             'question': "Combien d'argent lui reste-t-il ?",
-            'operation': 'soustraction'        },
+            'operation': 'soustraction'
+        },
         {
             'contexte': "Dans la classe, il y a {a} rangées de {b} élèves.",
             'question': "Combien y a-t-il d'élèves en total ?",
-            'operation': 'multiplication'        }
+            'operation': 'multiplication'
+        }
+    ]
 
-    # Situations supplémentaires pour CM1/CM2    situations_avancees = [
+    # Situations supplémentaires pour CM1/CM2
+    situations_avancees = [
         {
             'contexte': "Une boulangerie vend {a} baguettes par jour. En {b} jours, combien de baguettes vend-elle ?",
             'question': "Combien de baguettes en total ?",
-            'operation': 'multiplication'        },
+            'operation': 'multiplication'
+        },
         {
             'contexte': "{a} bonbons sont partagés équitablement entre {b} enfants.",
             'question': "Combien de bonbons chacun recevra-t-il ?",
-            'operation': 'division'        },
+            'operation': 'division'
+        },
         {
             'contexte': "Un livre coûte {a} euros. Une librairie en vend {b}.",
             'question': "Combien rapporte la vente ?",
-            'operation': 'multiplication'        }
-
-    # Choisir les situations selon le niveau    if niveau in ["CE1", "CE2"]:
+            'operation': 'multiplication'
+        }
+    ]
+    
+    # Choisir les situations selon le niveau    
+    if niveau in ["CE1", "CE2"]:
         situations = situations_base
-    else:  # CM1/CM2        situations = situations_base + situations_avancees
-        situation = random.choice(situations)
-    # Adapter les nombres selon le niveau    if niveau == "CE1":
+    else:  # CM1/CM2        
+        situations = situations_base + situations_avancees
+    situation = random.choice(situations)
+    # Adapter les nombres selon le niveau    
+    if niveau == "CE1":
         a = random.randint(10, 30)
         b = random.randint(5, 20)
     elif niveau == "CE2":
@@ -151,7 +163,7 @@ def generer_probleme(niveau):
         reponse = a * b
     else:  # division
         if b == 0: b = 1 # Éviter la division par zéro
-        # S'assurer que la division tombe juste pour les problèmes simples
+    # S'assurer que la division tombe juste pour les problèmes simples
         a = b * random.randint(2, 10)
         reponse = a // b
     contexte = situation['contexte'].format(a=a, b=b)
@@ -180,7 +192,7 @@ def generer_exercice(niveau, type_exercice=None):
 def verifier_reponse(exercice, reponse_utilisateur):
     """Vérifie si la réponse est correcte"""
     try:
-        reponse_int = int(reponse_utilisateur)
+        reponse_num = float(reponse_utilisateur)
         return reponse_int == exercice['reponse']
     except ValueError:
         return False
@@ -237,44 +249,51 @@ def init_session_state():
             st.session_state[key] = value
 
 def local_css():
-    st.markdown("""
-    <style>
-    .big-font {
-        font-size:30px !important;
-        font-weight: bold;
-        color: #FF6B6B;
-    }
-    .success-box {
-        padding: 20px;
-        border-radius: 10px;
-        background-color: #D4EDDA;
-        border: 2px solid #28A745;
-        margin: 10px 0;
-    }
-    .error-box {
-        padding: 20px;
-        border-radius: 10px;
-        background-color: #F8D7DA;
-        border: 2px solid #DC3545;
-        margin: 10px 0;
-    }
-    .info-box {
-        padding: 15px;
-        border-radius: 10px;
-        background-color: #D1ECF1;
-        border: 2px solid #17A2B8;
-        margin: 10px 0;
-    }
-    .badge {
-        display: inline-block;
-        padding: 5px 10px;
-        margin: 5px;
-        border-radius: 15px;
-        background-color: #FFD700;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("""    
+    <style>    
+    .big-font {        
+        font-size:30px !important;        
+        font-weight: bold;        
+        color: #FF6B6B;    }    
+    .success-box {        
+        padding: 20px;        
+        border-radius: 10px;        
+        background-color: #D4EDDA;        
+        border: 2px solid #28A745;        
+        margin: 10px 0;    }    
+    .error-box {        
+        padding: 20px;        
+        border-radius: 10px;        
+        background-color: #F8D7DA;        
+        border: 2px solid #DC3545;        
+        margin: 10px 0;    }    
+    .info-box {        
+        padding: 15px;       
+        border-radius: 10px;        
+        background-color: #D1ECF1;        
+        border: 2px solid #17A2B8;        
+        margin: 10px 0;    }    
+    .badge {        
+        display: inline-block;        
+        padding: 5px 10px;        
+        margin: 5px;        
+        border-radius: 15px;        
+        background-color: #FFD700;        
+        font-weight: bold;    }    
+    /* Ajouter ces styles pour le crédit */    
+    .footer-credit {        
+        text-align: center;        
+        color: #888;        
+        font-size: 12px;        
+        margin-top: 30px;        
+        padding: 20px;        
+        border-top: 1px solid #e0e0e0;    }    
+    .footer-credit strong {       
+        color: #333;    }    
+    .footer-credit p {        
+        margin: 5px 0;    }    
+    </style>    """, 
+    unsafe_allow_html=True)
 
 def main():
     init_session_state()
@@ -301,6 +320,16 @@ def main():
         if st.session_state.badges:
             for badge in st.session_state.badges:
                 st.markdown(f'<div class="badge">{badge}</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("""
+        <div style='text-align: center; color: #888; font-size: 12px; margin-top: 30px;'>
+        <p>✨ <strong>MathCopain</strong></p>
+        <p>Développé par <strong>Pascal Dao</strong></p>
+        <p>Avec ❤️ pour l'éducation</p>
+        <p style='font-size: 10px; margin-top: 10px; color: #aaa;'>v1.0.0 | Octobre 2025</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.title("🎓 MathCopain - Aide aux Devoirs")
     if st.session_state.nom_eleve:
         st.markdown(f"### Bonjour {st.session_state.nom_eleve} ! 👋")
