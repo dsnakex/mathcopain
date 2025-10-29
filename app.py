@@ -12,13 +12,20 @@ st.set_page_config(
 )
 
 def generer_addition(niveau):
-    """Génère un exercice d'addition selon le niveau"""
     if niveau == "CE1":
         a = random.randint(10, 50)
         b = random.randint(10, 50)
-    else:
+    elif niveau == "CE2":
         a = random.randint(50, 500)
         b = random.randint(50, 500)
+    elif niveau == "CM1":
+        # CM1 : Additions jusqu'à 100 000
+        a = random.randint(1000, 50000)
+        b = random.randint(1000, 50000)
+    else:  # CM2
+        # CM2 : Additions avec décimaux ou très grands nombres
+        a = random.randint(10000, 100000)
+        b = random.randint(10000, 100000)
     return {
         'type': 'addition',
         'question': f"{a} + {b} = ?",
@@ -28,13 +35,20 @@ def generer_addition(niveau):
     }
 
 def generer_soustraction(niveau):
-    """Génère un exercice de soustraction selon le niveau"""
     if niveau == "CE1":
         b = random.randint(10, 40)
         a = random.randint(b + 10, 80)
-    else:
+    elif niveau == "CE2":
         b = random.randint(50, 400)
         a = random.randint(b + 50, 800)
+    elif niveau == "CM1":
+        # CM1 : Soustractions jusqu'à 100 000
+        b = random.randint(1000, 25000)
+        a = random.randint(b + 1000, 50000)
+    else:  # CM2
+        # CM2 : Soustractions plus complexes
+        b = random.randint(10000, 50000)
+        a = random.randint(b + 10000, 100000)
     return {
         'type': 'soustraction',
         'question': f"{a} - {b} = ?",
@@ -44,10 +58,35 @@ def generer_soustraction(niveau):
     }
 
 def generer_multiplication(niveau):
-    """Génère un exercice de multiplication"""
-    tables = [2, 3, 4, 5] if niveau == "CE1" else [2, 3, 4, 5, 6, 7, 8, 9]
+    if niveau == "CE1":
+        tables = [2, 3, 4, 5]
+        multiplicateur = random.randint(1, 10)
+    elif niveau == "CE2":
+        tables = [2, 3, 4, 5, 6, 7, 8, 9]
+        multiplicateur = random.randint(1, 10)
+    elif niveau == "CM1":
+        # CM1 : Multiplications posées (2-3 chiffres × 1-2 chiffres)
+        a = random.randint(10, 999)
+        b = random.randint(2, 99)
+        return {
+            'type': 'multiplication',
+            'question': f"{a} × {b} = ?",
+            'reponse': a * b,
+            'operande1': a,
+            'operande2': b
+        }
+    else:  # CM2
+        # CM2 : Multiplications plus grandes
+        a = random.randint(100, 9999)
+        b = random.randint(10, 100)
+        return {
+            'type': 'multiplication',
+            'question': f"{a} × {b} = ?",
+            'reponse': a * b,
+            'operande1': a,
+            'operande2': b
+        }
     table = random.choice(tables)
-    multiplicateur = random.randint(1, 10)
     return {
         'type': 'multiplication',
         'question': f"{table} × {multiplicateur} = ?",
@@ -57,38 +96,64 @@ def generer_multiplication(niveau):
     }
 
 def generer_probleme(niveau):
-    """Génère un problème mathématique contextualisé"""
-    situations = [
+    # Situations pour CE1/CE2
+    situations_base = [
         {
             'contexte': "Marie a {a} billes. Son ami lui en donne {b}.",
             'question': "Combien de billes a-t-elle maintenant ?",
-            'operation': 'addition'
-        },
+            'operation': 'addition'        },
         {
             'contexte': "Théo a {a} euros. Il achète un jeu qui coûte {b} euros.",
             'question': "Combien d'argent lui reste-t-il ?",
-            'operation': 'soustraction'
-        },
+            'operation': 'soustraction'        },
         {
             'contexte': "Dans la classe, il y a {a} rangées de {b} élèves.",
-            'question': "Combien y a-t-il d'élèves en tout ?",
-            'operation': 'multiplication'
-        }
-    ]
-    situation = random.choice(situations)
-    if niveau == "CE1":
+            'question': "Combien y a-t-il d'élèves en total ?",
+            'operation': 'multiplication'        }
+
+    # Situations supplémentaires pour CM1/CM2    situations_avancees = [
+        {
+            'contexte': "Une boulangerie vend {a} baguettes par jour. En {b} jours, combien de baguettes vend-elle ?",
+            'question': "Combien de baguettes en total ?",
+            'operation': 'multiplication'        },
+        {
+            'contexte': "{a} bonbons sont partagés équitablement entre {b} enfants.",
+            'question': "Combien de bonbons chacun recevra-t-il ?",
+            'operation': 'division'        },
+        {
+            'contexte': "Un livre coûte {a} euros. Une librairie en vend {b}.",
+            'question': "Combien rapporte la vente ?",
+            'operation': 'multiplication'        }
+
+    # Choisir les situations selon le niveau    if niveau in ["CE1", "CE2"]:
+        situations = situations_base
+    else:  # CM1/CM2        situations = situations_base + situations_avancees
+        situation = random.choice(situations)
+    # Adapter les nombres selon le niveau    if niveau == "CE1":
         a = random.randint(10, 30)
         b = random.randint(5, 20)
-    else:
+    elif niveau == "CE2":
         a = random.randint(20, 50)
         b = random.randint(10, 30)
+    elif niveau == "CM1":
+        a = random.randint(50, 200)
+        b = random.randint(20, 100)
+    else:  # CM2
+        a = random.randint(100, 500)
+        b = random.randint(50, 200)
+    # Calculer la réponse
     if situation['operation'] == 'addition':
         reponse = a + b
     elif situation['operation'] == 'soustraction':
-        a = a + b
+        if a < b: a, b = b, a # Éviter les négatifs
         reponse = a - b
-    else:
+    elif situation['operation'] == 'multiplication':
         reponse = a * b
+    else:  # division
+        if b == 0: b = 1 # Éviter la division par zéro
+        # S'assurer que la division tombe juste pour les problèmes simples
+        a = b * random.randint(2, 10)
+        reponse = a // b
     contexte = situation['contexte'].format(a=a, b=b)
     question = situation['question']
     return {
@@ -130,7 +195,7 @@ def attribuer_points(correct, type_exercice):
     }
     return points.get(type_exercice, 10) if correct else 0
 
-def verifier_badges(points_total, exercices_reussis, badges_actuels):
+def verifier_badges(points_total, exercices_reussis, badges_actuels, niveau):
     """Vérifie quels nouveaux badges ont été débloqués"""
     badges_disponibles = {
         'premier_pas': {'seuil': 1, 'nom': '🌟 Premier Pas'},
@@ -140,6 +205,10 @@ def verifier_badges(points_total, exercices_reussis, badges_actuels):
         'centenaire': {'seuil': 100, 'nom': '💯 Centenaire'},
         'super_star': {'seuil': 500, 'nom': '⭐ Super Star'}
     }
+    # Badges bonus pour CM1/CM2
+    if niveau in ["CM1", "CM2"]:
+        badges_disponibles['mathematicien'] = {'seuil': 50, 'nom': '🧮 Mathématicien'}
+        badges_disponibles['genie'] = {'seuil': 100, 'nom': '🔬 Génie des Maths'}
     nouveaux_badges = []
     for key, badge in badges_disponibles.items():
         if key in ['premier_pas', 'persistant', 'champion', 'expert']:
@@ -218,7 +287,7 @@ def main():
         st.markdown("---")
         st.session_state.niveau = st.selectbox(
             "Niveau :",
-            ["CE1", "CE2"]
+            ["CE1", "CE2", "CM1", "CM2"]
         )
         st.markdown("---")
         st.subheader("📊 Mes Progrès")
@@ -263,7 +332,7 @@ def main():
             user_answer = st.number_input(
                 "Ta réponse :",
                 min_value=0,
-                max_value=10000,
+                max_value=1000000,
                 value=0,
                 disabled=st.session_state.show_feedback
             )
@@ -280,7 +349,8 @@ def main():
                     st.session_state.feedback_correct = True
                     nouveaux = verifier_badges(st.session_state.points,
                                               st.session_state.exercices_reussis,
-                                              st.session_state.badges)
+                                              st.session_state.badges,
+                                              st.session_state.niveau)
                     st.session_state.badges.extend(nouveaux)
                 else:
                     st.session_state.feedback_correct = False
