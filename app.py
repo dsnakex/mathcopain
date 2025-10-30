@@ -164,12 +164,12 @@ def generer_probleme(niveau):
     else:  # division
         if b == 0: b = 1 # Éviter la division par zéro
     # S'assurer que la division tombe juste pour les problèmes simples
-        a = b * random.randint(2, 10)
-        reponse = a // b
+        a = b * random.randint(2, 10) # Assure une division entière
+        reponse = a // b # Calcul de la réponse pour la division
     contexte = situation['contexte'].format(a=a, b=b)
     question = situation['question']
     return {
-        'type': 'probleme',
+        'type': 'probleme', # Correction de l'indentation
         'question': f"{contexte} {question}",
         'reponse': reponse,
         'operation': situation['operation']
@@ -190,11 +190,23 @@ def generer_exercice(niveau, type_exercice=None):
         return generer_probleme(niveau)
 
 def verifier_reponse(exercice, reponse_utilisateur):
-    """Vérifie si la réponse est correcte"""
+    """
+    Vérifie si la réponse de l'utilisateur est correcte
+    
+    Args:
+        exercice (dict): L'exercice avec 'reponse'
+        reponse_utilisateur: La réponse saisie (int ou str)
+    
+    Returns:
+        bool: True si correcte, False sinon
+    """
     try:
-        reponse_num = float(reponse_utilisateur)
-        return reponse_int == exercice['reponse']
-    except ValueError:
+        # Convertir la réponse en entier
+        reponse_int = int(reponse_utilisateur) # Utilisation de int() et correction du nom de variable
+        # Comparer avec la bonne réponse
+        return reponse_int == exercice['reponse'] # Comparaison avec la variable correcte
+    except (ValueError, TypeError):
+        # Si conversion impossible, réponse incorrecte
         return False
 
 def attribuer_points(correct, type_exercice):
@@ -330,7 +342,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-    st.title("🎓 MathCopain - Aide aux Devoirs")
+    st.title("🎓 MathCopain")
     if st.session_state.nom_eleve:
         st.markdown(f"### Bonjour {st.session_state.nom_eleve} ! 👋")
     st.markdown("---")
@@ -358,19 +370,29 @@ def main():
         st.markdown(f'<p class="big-font">{ex["question"]}</p>', unsafe_allow_html=True)
         col_ans, col_btn = st.columns([3, 1])
         with col_ans:
+    # Créer une clé unique basée sur l'exercice actuel
+            exercise_key = f"answer_{id(st.session_state.current_exercise)}"
+    
             user_answer = st.number_input(
                 "Ta réponse :",
                 min_value=0,
-                max_value=1000000,
-                value=0,
-                disabled=st.session_state.show_feedback
-            )
+            max_value=1000000,
+            value=None,  # ← Champ vide
+        step=1,
+        format="%d",
+        key=f"input_{st.session_state.exercices_totaux}",
+        disabled=st.session_state.show_feedback
+    )
         with col_btn:
             st.write("")
             st.write("")
-            if st.button("✅ Valider", disabled=st.session_state.show_feedback):
+            # Désactiver le bouton si pas de réponse
+            disabled_button = st.session_state.show_feedback or user_answer is None
+
+            if st.button("✅ Valider", disabled=disabled_button):
                 st.session_state.exercices_totaux += 1
                 correct = verifier_reponse(ex, user_answer)
+                
                 if correct:
                     st.session_state.exercices_reussis += 1
                     pts = attribuer_points(True, ex['type'])
@@ -381,13 +403,13 @@ def main():
                                               st.session_state.badges,
                                               st.session_state.niveau)
                     st.session_state.badges.extend(nouveaux)
-                else:
-                    st.session_state.feedback_correct = False
-                st.session_state.show_feedback = True
-                st.rerun()
+                else: # Correction de l'indentation
+                    st.session_state.feedback_correct = False # Correction de l'indentation
+                st.session_state.show_feedback = True # Correction de l'indentation
+                st.rerun() # Correction de l'indentation
         if st.session_state.show_feedback:
             if st.session_state.feedback_correct:
-                pts = attribuer_points(True, ex['type'])
+                pts = attribuer_points(True, ex['type']) # Correction de l'indentation
                 st.markdown(
                     f"<div class=\"success-box\">🎉 Bravo ! C'est parfait !<br>+ {pts} points !</div>",
                     unsafe_allow_html=True
@@ -401,7 +423,9 @@ def main():
 )
             if st.button("➡️ Exercice suivant", type="primary"):
                 st.session_state.current_exercise = generer_exercice(st.session_state.niveau)
-                st.session_state.show_feedback = False
+                st.session_state.show_feedback = False # Correction de l'indentation
+                # st.session_state.answer_input = 0 # Cette ligne est inutile et peut être supprimée
+                st.session_state.feedback_correct = False # Réinitialiser le feedback
                 st.rerun()
 
 if __name__ == "__main__":
