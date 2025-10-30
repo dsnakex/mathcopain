@@ -337,6 +337,7 @@ def main():
         <div style='text-align: center; color: #888; font-size: 12px; margin-top: 30px;'>
         <p>✨ <strong>MathCopain</strong></p>
         <p>Développé par <strong>Pascal Dao</strong></p>
+        <p>📧 <a href='mailto:dpascal0@gmail.com'>Contactez-moi</a></p>
         <p>Avec ❤️ pour l'éducation</p>
         <p style='font-size: 10px; margin-top: 10px; color: #aaa;'>v1.0.0 | Octobre 2025</p>
         </div>
