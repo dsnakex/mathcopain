@@ -1,5 +1,8 @@
 import streamlit as st
 import random
+import json
+import pandas as pd
+import os
 from datetime import datetime
 
 # ============================================
@@ -11,6 +14,71 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ============================================
+# GESTION DE LA PERSISTANCE DES DONNÉES
+# ============================================
+
+USERS_FILE = "users_data.json"
+
+def charger_donnees_utilisateur(nom_eleve):
+    """Charge les données sauvegardées pour un élève"""
+    if not os.path.exists(USERS_FILE):
+        return None
+    
+    try:
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
+            tous_les_users = json.load(f)
+        
+        return tous_les_users.get(nom_eleve)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def sauvegarder_donnees_utilisateur(nom_eleve, points, exercices_reussis,
+                                     exercices_totaux, badges, niveau, progress_history):
+    """Sauvegarde les données d'un élève"""
+    # Charger les données existantes
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                tous_les_users = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            tous_les_users = {}
+    else:
+        tous_les_users = {}
+    
+    # Ajouter/mettre à jour les données de cet utilisateur
+    tous_les_users[nom_eleve] = {
+        'points': points,
+        'exercices_reussis': exercices_reussis,
+        'exercices_totaux': exercices_totaux,
+        'badges': badges,
+        'niveau': niveau,
+        'date_derniere_session': datetime.now().isoformat(),
+        'progress_history': progress_history  # Ajout de l'historique
+    }
+    
+    # Sauvegarder
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(tous_les_users, f, indent=4, ensure_ascii=False)
+        return True
+    except Exception as e:
+        st.error(f"Erreur lors de la sauvegarde : {e}")
+        return False
+
+def obtenir_tous_les_eleves():
+    """Retourne la liste de tous les élèves enregistrés"""
+    if not os.path.exists(USERS_FILE):
+        return []
+    
+    try:
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
+            tous_les_users = json.load(f)
+        return list(tous_les_users.keys())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
 
 def generer_addition(niveau):
     if niveau == "CE1":
@@ -153,6 +221,7 @@ def generer_probleme(niveau):
     else:  # CM2
         a = random.randint(100, 500)
         b = random.randint(50, 200)
+
     # Calculer la réponse
     if situation['operation'] == 'addition':
         reponse = a + b
@@ -161,11 +230,12 @@ def generer_probleme(niveau):
         reponse = a - b
     elif situation['operation'] == 'multiplication':
         reponse = a * b
-    else:  # division
+    elif situation['operation'] == 'division':
         if b == 0: b = 1 # Éviter la division par zéro
-    # S'assurer que la division tombe juste pour les problèmes simples
-        a = b * random.randint(2, 10) # Assure une division entière
-        reponse = a // b # Calcul de la réponse pour la division
+        # S'assurer que la division tombe juste en recalculant 'a'
+        facteur = random.randint(2, 10)
+        a = b * facteur
+        reponse = a // b
     contexte = situation['contexte'].format(a=a, b=b)
     question = situation['question']
     return {
@@ -201,12 +271,12 @@ def verifier_reponse(exercice, reponse_utilisateur):
         bool: True si correcte, False sinon
     """
     try:
-        # Convertir la réponse en entier
-        reponse_int = int(reponse_utilisateur) # Utilisation de int() et correction du nom de variable
-        # Comparer avec la bonne réponse
-        return reponse_int == exercice['reponse'] # Comparaison avec la variable correcte
+        # Convertir la réponse de l'utilisateur en entier.
+        reponse_num = int(reponse_utilisateur)
+        # Comparer avec la réponse attendue. (Correction: reponse_int -> reponse_num)
+        return reponse_num == exercice['reponse']
     except (ValueError, TypeError):
-        # Si conversion impossible, réponse incorrecte
+        # Si la conversion échoue (ex: None ou texte), la réponse est incorrecte.
         return False
 
 def attribuer_points(correct, type_exercice):
@@ -244,7 +314,7 @@ def verifier_badges(points_total, exercices_reussis, badges_actuels, niveau):
     return nouveaux_badges
 
 def init_session_state():
-    """Initialise toutes les variables de session"""
+    """Initialise les variables de session"""
     defaults = {
         'points': 0,
         'exercices_reussis': 0,
@@ -254,8 +324,11 @@ def init_session_state():
         'current_exercise': None,
         'show_feedback': False,
         'feedback_correct': False,
-        'nom_eleve': ""
+        'nom_eleve': "",
+        'current_type': None,
+        'progress_history': []  # Initialiser l'historique de progression
     }
+    
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
@@ -312,9 +385,46 @@ def main():
     local_css()
     with st.sidebar:
         st.title("🎓 Mon Espace")
-        nom = st.text_input("Ton prénom :", value=st.session_state.nom_eleve)
-        if nom:
-            st.session_state.nom_eleve = nom
+
+        # Options : Nouveau ou Charger un existant
+        option_eleve = st.radio(
+            "Que veux-tu faire ?",
+            ["Nouveau profil", "Charger un profil existant"],
+            key="login_option"
+        )
+
+        if option_eleve == "Nouveau profil":
+            nom = st.text_input("Ton prénom :", value=st.session_state.nom_eleve, key="new_user_name")
+            if nom and st.button("Créer et commencer"):
+                st.session_state.nom_eleve = nom
+                # Réinitialiser les stats pour un nouveau profil
+                st.session_state.points = 0
+                st.session_state.exercices_reussis = 0
+                st.session_state.exercices_totaux = 0
+                st.session_state.badges = []
+                st.session_state.progress_history = [] # Réinitialiser l'historique
+                st.success(f"Bienvenue {nom} !")
+                st.rerun()
+
+        else:
+            eleves_existants = obtenir_tous_les_eleves()
+            if eleves_existants:
+                nom_selectionne = st.selectbox("Sélectionne ton profil :", eleves_existants)
+                if st.button("📂 Charger ce profil"):
+                    donnees = charger_donnees_utilisateur(nom_selectionne)
+                    if donnees:
+                        st.session_state.nom_eleve = nom_selectionne
+                        st.session_state.points = donnees.get('points', 0)
+                        st.session_state.exercices_reussis = donnees.get('exercices_reussis', 0)
+                        st.session_state.exercices_totaux = donnees.get('exercices_totaux', 0)
+                        st.session_state.badges = donnees.get('badges', [])
+                        st.session_state.niveau = donnees.get('niveau', 'CE1')
+                        st.session_state.progress_history = donnees.get('progress_history', []) # Charger l'historique
+                        st.success(f"✅ Profil de {nom_selectionne} chargé !")
+                        st.rerun()
+            else:
+                st.info("Aucun profil existant. Crée-en un nouveau !")
+
         st.markdown("---")
         st.session_state.niveau = st.selectbox(
             "Niveau :",
@@ -332,6 +442,52 @@ def main():
         if st.session_state.badges:
             for badge in st.session_state.badges:
                 st.markdown(f'<div class="badge">{badge}</div>', unsafe_allow_html=True)
+        
+        st.markdown("---")
+        st.subheader("📈 Ma Progression")
+        if st.session_state.progress_history:
+            # Créer un DataFrame pandas pour le graphique
+            df_progress = pd.DataFrame(st.session_state.progress_history)
+            df_progress['timestamp'] = pd.to_datetime(df_progress['timestamp'])
+            df_progress = df_progress.set_index('timestamp')
+            
+            st.line_chart(df_progress['points'])
+        else:
+            st.info("Fais quelques exercices pour voir ta progression !")
+
+
+        st.markdown("---")
+        
+        # 💾 Bouton Sauvegarder
+        if st.button("💾 Sauvegarder Profil", use_container_width=True):
+            if st.session_state.nom_eleve:
+                success = sauvegarder_donnees_utilisateur(
+                    st.session_state.nom_eleve,
+                    st.session_state.points,
+                    st.session_state.exercices_reussis,
+                    st.session_state.exercices_totaux,
+                    st.session_state.badges,
+                    st.session_state.niveau,
+                    st.session_state.progress_history
+                )
+                if success:
+                    st.success(f"✅ Profil de {st.session_state.nom_eleve} sauvegardé !")
+                else:
+                    st.error("❌ Erreur lors de la sauvegarde")
+            else:
+                st.warning("⚠️ Entrez un prénom d'abord")
+        
+        # 🔄 Bouton Recommencer à Zéro
+        if st.button("🔄 Recommencer à zéro", use_container_width=True):
+            st.session_state.points = 0
+            st.session_state.exercices_reussis = 0
+            st.session_state.exercices_totaux = 0
+            st.session_state.badges = []
+            st.session_state.progress_history = []
+            st.session_state.current_exercise = None
+            st.success("✅ Progression réinitialisée !")
+            st.rerun()
+        
         st.markdown("---")
         st.markdown("""
         <div style='text-align: center; color: #888; font-size: 12px; margin-top: 30px;'>
@@ -344,9 +500,13 @@ def main():
         """, unsafe_allow_html=True)
 
     st.title("🎓 MathCopain")
+
     if st.session_state.nom_eleve:
         st.markdown(f"### Bonjour {st.session_state.nom_eleve} ! 👋")
-    st.markdown("---")
+    else:
+        st.info("👈 Commence par créer ou charger un profil dans le menu de gauche.")
+        st.stop() # Arrête l'exécution si aucun profil n'est actif
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         if st.button("➕ Addition", use_container_width=True):
@@ -370,47 +530,63 @@ def main():
         ex = st.session_state.current_exercise
         st.markdown(f'<p class="big-font">{ex["question"]}</p>', unsafe_allow_html=True)
         col_ans, col_btn = st.columns([3, 1])
+
         with col_ans:
-    # Créer une clé unique basée sur l'exercice actuel
-            exercise_key = f"answer_{id(st.session_state.current_exercise)}"
-    
             user_answer = st.number_input(
                 "Ta réponse :",
                 min_value=0,
-            max_value=1000000,
-            value=None,  # ← Champ vide
-        step=1,
-        format="%d",
-        key=f"input_{st.session_state.exercices_totaux}",
-        disabled=st.session_state.show_feedback
-    )
+                max_value=1000000,
+                value=None,  # Champ vide par défaut
+                step=1,
+                format="%d",
+                key=f"input_{st.session_state.exercices_totaux}", # Clé unique pour rafraîchir le champ
+                disabled=st.session_state.show_feedback
+            )
+
         with col_btn:
             st.write("")
             st.write("")
             # Désactiver le bouton si pas de réponse
             disabled_button = st.session_state.show_feedback or user_answer is None
 
-            if st.button("✅ Valider", disabled=disabled_button):
+            if st.button("✅ Valider", disabled=disabled_button, use_container_width=True):
                 st.session_state.exercices_totaux += 1
                 correct = verifier_reponse(ex, user_answer)
-                
+
                 if correct:
                     st.session_state.exercices_reussis += 1
                     pts = attribuer_points(True, ex['type'])
                     st.session_state.points += pts
                     st.session_state.feedback_correct = True
-                    nouveaux = verifier_badges(st.session_state.points,
-                                              st.session_state.exercices_reussis,
-                                              st.session_state.badges,
-                                              st.session_state.niveau)
+                    nouveaux = verifier_badges(
+                        st.session_state.points,
+                        st.session_state.exercices_reussis,
+                        st.session_state.badges,
+                        st.session_state.niveau
+                    )
                     st.session_state.badges.extend(nouveaux)
-                else: # Correction de l'indentation
-                    st.session_state.feedback_correct = False # Correction de l'indentation
-                st.session_state.show_feedback = True # Correction de l'indentation
-                st.rerun() # Correction de l'indentation
+                else:
+                    st.session_state.feedback_correct = False
+
+                # Ajouter un point de données à l'historique si la réponse est correcte
+                if correct:
+                    st.session_state.progress_history.append({
+                        'timestamp': datetime.now().isoformat(),
+                        'points': st.session_state.points
+                    })
+
+                # Sauvegarder les progrès après chaque réponse
+                sauvegarder_donnees_utilisateur(
+                    st.session_state.nom_eleve, st.session_state.points, st.session_state.exercices_reussis,
+                    st.session_state.exercices_totaux, st.session_state.badges, st.session_state.niveau,
+                    st.session_state.progress_history
+                )
+                st.session_state.show_feedback = True
+                st.rerun()
+
         if st.session_state.show_feedback:
             if st.session_state.feedback_correct:
-                pts = attribuer_points(True, ex['type']) # Correction de l'indentation
+                pts = attribuer_points(True, ex['type'])
                 st.markdown(
                     f"<div class=\"success-box\">🎉 Bravo ! C'est parfait !<br>+ {pts} points !</div>",
                     unsafe_allow_html=True
@@ -421,12 +597,11 @@ def main():
                     f'<div class="error-box">😊 Pas tout à fait ! La bonne réponse est {ex["reponse"]}.<br>'
                     f'Ne t\'inquiète pas, tu vas y arriver !</div>',
                     unsafe_allow_html=True
-)
+                )
             if st.button("➡️ Exercice suivant", type="primary"):
                 st.session_state.current_exercise = generer_exercice(st.session_state.niveau)
-                st.session_state.show_feedback = False # Correction de l'indentation
-                # st.session_state.answer_input = 0 # Cette ligne est inutile et peut être supprimée
-                st.session_state.feedback_correct = False # Réinitialiser le feedback
+                st.session_state.show_feedback = False
+                st.session_state.feedback_correct = False
                 st.rerun()
 
 if __name__ == "__main__":
